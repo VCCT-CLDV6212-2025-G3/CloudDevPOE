@@ -1,0 +1,51 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome to ABC Retail</h1>
+    <p class="lead">This application demonstrates integration with various Azure Storage services.</p>
+
+    <div class="row mt-5">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-table fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Table Storage</h5>
+                    <p class="card-text">Manage customer profiles and product information using Azure Table Storage.</p>
+                    <a asp-controller="Customer" asp-action="Index" class="btn btn-primary">View Customers</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-images fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">Blob Storage</h5>
+                    <p class="card-text">Store and manage images, videos, and documents in Azure Blob Storage.</p>
+                    <a asp-controller="Blob" asp-action="Index" class="btn btn-success">View Files</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-list fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title">Queue Storage</h5>
+                    <p class="card-text">Handle order processing and inventory management with Azure Queue Storage.</p>
+                    <a asp-controller="Queue" asp-action="Index" class="btn btn-warning">View Queues</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-contract fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">File Storage</h5>
+                    <p class="card-text">Store and manage contracts and documents using Azure File Storage.</p>
+                    <a asp-controller="Contract" asp-action="Index" class="btn btn-info">View Contracts</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
