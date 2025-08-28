@@ -1,8 +1,9 @@
 ﻿@model List<CloudDevPOE.Models.Product>
 @{
-    ViewData["Title"] = "Product";
+    ViewData["Title"] = "Products";
     var categories = ViewBag.Categories as List<string> ?? new List<string>();
     var selectedCategory = ViewBag.SelectedCategory as string ?? "";
+    var errorMessage = ViewBag.ErrorMessage as string;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -11,6 +12,14 @@
         <i class="fas fa-plus"></i> Add New Product
     </a>
 </div>
+
+<!-- Show error message if there is one -->
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i> @errorMessage
+    </div>
+}
 
 <!-- Category Filter -->
 @if (categories.Any())
@@ -40,7 +49,7 @@
     </div>
 }
 
-@if (Model.Any())
+@if (Model != null && Model.Any())
 {
     <div class="row">
         @foreach (var product in Model)
@@ -75,6 +84,9 @@
                         <div class="btn-group w-100" role="group">
                             <a asp-action="Details" asp-route-id="@product.RowKey" class="btn btn-outline-info">
                                 <i class="fas fa-eye"></i>
+                            </a>
+                            <a asp-action="Create" class="btn btn-outline-success">
+                                <i class="fas fa-plus"></i>
                             </a>
                             <a asp-action="Edit" asp-route-id="@product.RowKey" class="btn btn-outline-warning">
                                 <i class="fas fa-edit"></i>

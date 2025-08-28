@@ -1,0 +1,241 @@
+﻿@{
+    ViewData["Title"] = "Queue Storage";
+    var orderMessages = ViewBag.OrderMessages as List<CloudDevPOE.Models.OrderMessage> ?? new List<CloudDevPOE.Models.OrderMessage>();
+    var newOrderMessage = ViewBag.NewOrderMessage as CloudDevPOE.Models.OrderMessage ?? new CloudDevPOE.Models.OrderMessage();
+    var newInventoryMessage = ViewBag.NewInventoryMessage as CloudDevPOE.Models.InventoryMessage ?? new CloudDevPOE.Models.InventoryMessage();
+    var newImageMessage = ViewBag.NewImageMessage as CloudDevPOE.Models.ImageProcessingMessage ?? new CloudDevPOE.Models.ImageProcessingMessage();
+    var errorMessage = ViewBag.ErrorMessage as string;
+}
+
+<h2><i class="fas fa-list"></i> Queue Storage Management</h2>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i> @errorMessage
+    </div>
+}
+
+<!-- Tabs for different queue types -->
+<ul class="nav nav-tabs" id="queueTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders" type="button">
+            <i class="fas fa-shopping-cart"></i> Order Processing
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button">
+            <i class="fas fa-boxes"></i> Inventory Management
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button">
+            <i class="fas fa-image"></i> Image Processing
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="queueTabContent">
+    <!-- Order Processing Tab -->
+    <div class="tab-pane fade show active" id="orders" role="tabpanel">
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-plus"></i> Send Order Message</h5>
+                    </div>
+                    <div class="card-body">
+                        <form asp-action="SendOrderMessage" method="post">
+                            <input type="hidden" name="OrderId" value="@Guid.NewGuid().ToString()" />
+
+                            <div class="mb-3">
+                                <label for="CustomerId" class="control-label">Customer ID</label>
+                                <input name="CustomerId" class="form-control" placeholder="Enter customer ID" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="TotalAmount" class="control-label">Total Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input name="TotalAmount" class="form-control" type="number" step="0.01" placeholder="0.00" required />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="Message" class="control-label">Message</label>
+                                <textarea name="Message" class="form-control" rows="3" placeholder="Order details..."></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-list"></i> Pending Orders (@orderMessages.Count)</h5>
+                        <form asp-action="ProcessOrderMessage" method="post" style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="fas fa-cog"></i> Process Next
+                            </button>
+                        </form>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        @if (orderMessages.Any())
+                        {
+                            @foreach (var order in orderMessages)
+                            {
+                                <div class="border p-2 mb-2 rounded">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>Order: @order.OrderId[..8]...</strong>
+                                        <small class="text-muted">@order.OrderDate.ToString("MMM dd, HH:mm")</small>
+                                    </div>
+                                    <div><strong>Customer:</strong> @order.CustomerId</div>
+                                    <div><strong>Amount:</strong> $@order.TotalAmount</div>
+                                    @if (!string.IsNullOrEmpty(order.Message))
+                                    {
+                                        <div class="small text-muted">@order.Message</div>
+                                    }
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted">
+                                <i class="fas fa-inbox fa-2x"></i>
+                                <p class="mt-2">No pending orders</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Management Tab -->
+    <div class="tab-pane fade" id="inventory" role="tabpanel">
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-plus"></i> Send Inventory Message</h5>
+                    </div>
+                    <div class="card-body">
+                        <form asp-action="SendInventoryMessage" method="post">
+                            <div class="mb-3">
+                                <label for="ProductId" class="control-label">Product ID</label>
+                                <input name="ProductId" class="form-control" placeholder="Enter product ID" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="Action" class="control-label">Action</label>
+                                <select name="Action" class="form-select" required>
+                                    <option value="">Select Action</option>
+                                    <option value="UPDATE_STOCK">Update Stock</option>
+                                    <option value="LOW_STOCK_ALERT">Low Stock Alert</option>
+                                    <option value="REORDER">Reorder Request</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="Quantity" class="control-label">Quantity</label>
+                                <input name="Quantity" class="form-control" type="number" placeholder="0" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="Message" class="control-label">Message</label>
+                                <textarea name="Message" class="form-control" rows="3" placeholder="Inventory details..."></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-paper-plane"></i> Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-boxes"></i> Process Inventory</h5>
+                        <form asp-action="ProcessInventoryMessage" method="post" style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-warning">
+                                <i class="fas fa-cog"></i> Process Next
+                            </button>
+                        </form>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-boxes fa-2x"></i>
+                            <p class="mt-2">Click "Process Next" to handle inventory messages</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Processing Tab -->
+    <div class="tab-pane fade" id="images" role="tabpanel">
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-plus"></i> Send Image Processing Message</h5>
+                    </div>
+                    <div class="card-body">
+                        <form asp-action="SendImageMessage" method="post">
+                            <div class="mb-3">
+                                <label for="ImageName" class="control-label">Image Name</label>
+                                <input name="ImageName" class="form-control" placeholder="Enter image name" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="ImageUrl" class="control-label">Image URL</label>
+                                <input name="ImageUrl" class="form-control" type="url" placeholder="https://..." required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="ProcessingType" class="control-label">Processing Type</label>
+                                <select name="ProcessingType" class="form-select" required>
+                                    <option value="">Select Processing Type</option>
+                                    <option value="RESIZE">Resize Image</option>
+                                    <option value="COMPRESS">Compress Image</option>
+                                    <option value="WATERMARK">Add Watermark</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-info">
+                                <i class="fas fa-paper-plane"></i> Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-image"></i> Process Images</h5>
+                        <form asp-action="ProcessImageMessage" method="post" style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-info">
+                                <i class="fas fa-cog"></i> Process Next
+                            </button>
+                        </form>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-image fa-2x"></i>
+                            <p class="mt-2">Click "Process Next" to handle image processing messages</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,151 @@
+﻿@{
+    ViewData["Title"] = "Upload Contract";
+    var contract = ViewBag.Contract as CloudDevPOE.Models.Contract ?? new CloudDevPOE.Models.Contract();
+}
+
+<h2><i class="fas fa-upload"></i> Upload New Contract</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <form asp-action="Upload" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Contract Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="ContractId" class="control-label">Contract ID</label>
+                                <input name="ContractId" class="form-control" value="@contract.ContractId" readonly />
+                                <div class="form-text">Auto-generated unique identifier</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="ContractType" class="control-label">Contract Type</label>
+                                <select name="ContractType" class="form-select">
+                                    <option value="">Select Contract Type</option>
+                                    <option value="Service Agreement">Service Agreement</option>
+                                    <option value="Employment Contract">Employment Contract</option>
+                                    <option value="Purchase Agreement">Purchase Agreement</option>
+                                    <option value="NDA">Non-Disclosure Agreement</option>
+                                    <option value="License Agreement">License Agreement</option>
+                                    <option value="Partnership Agreement">Partnership Agreement</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="ContractName" class="control-label">Contract Name <span class="text-danger">*</span></label>
+                                <input name="ContractName" class="form-control" required />
+                                <div class="form-text">Enter a descriptive name for this contract</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="CustomerId" class="control-label">Customer ID</label>
+                                <input name="CustomerId" class="form-control" placeholder="Optional customer reference" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="ExpiryDate" class="control-label">Expiry Date</label>
+                                <input name="ExpiryDate" class="form-control" type="date" />
+                                <div class="form-text">Optional expiration date</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="Status" class="control-label">Status</label>
+                                <select name="Status" class="form-select">
+                                    <option value="Draft" selected>Draft</option>
+                                    <option value="Under Review">Under Review</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Signed">Signed</option>
+                                    <option value="Executed">Executed</option>
+                                    <option value="Expired">Expired</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5><i class="fas fa-file-upload"></i> File Upload</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="contractFile" class="control-label">Contract File <span class="text-danger">*</span></label>
+                        <input name="contractFile" type="file" class="form-control" accept=".pdf,.doc,.docx,.txt" required />
+                        <div class="form-text">
+                            <strong>Supported formats:</strong> PDF, DOC, DOCX, TXT<br>
+                            <strong>Maximum file size:</strong> 50MB
+                        </div>
+                        <div class="text-danger">
+                            @Html.ValidationMessage("contractFile")
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fas fa-upload"></i> Upload Contract
+                </button>
+                <a asp-action="Index" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-arrow-left"></i> Back to Contracts
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Upload Guidelines</h5>
+            </div>
+            <div class="card-body">
+                <h6>File Requirements:</h6>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success"></i> PDF, DOC, DOCX, or TXT format</li>
+                    <li><i class="fas fa-check text-success"></i> Maximum size: 50MB</li>
+                    <li><i class="fas fa-check text-success"></i> Clear, readable content</li>
+                </ul>
+
+                <h6 class="mt-3">Contract Types:</h6>
+                <ul class="list-unstyled small">
+                    <li><strong>Service Agreement:</strong> Terms for service delivery</li>
+                    <li><strong>Employment Contract:</strong> Job terms and conditions</li>
+                    <li><strong>Purchase Agreement:</strong> Buying/selling terms</li>
+                    <li><strong>NDA:</strong> Non-disclosure agreements</li>
+                    <li><strong>License Agreement:</strong> Usage rights and terms</li>
+                    <li><strong>Partnership Agreement:</strong> Business partnership terms</li>
+                </ul>
+
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <i class="fas fa-shield-alt"></i>
+                        All contracts are stored securely in Azure File Storage with encryption at rest.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

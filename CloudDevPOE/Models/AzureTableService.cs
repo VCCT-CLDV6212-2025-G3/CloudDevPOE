@@ -6,25 +6,33 @@ namespace CloudDevPOE.Services
     public class AzureTableService
     {
         private readonly TableServiceClient _tableServiceClient;
+
+        // Table names
         private readonly string _customerTableName = "CustomerProfiles";
         private readonly string _productTableName = "Products";
 
+        // Constructor initializes the TableServiceClient using the connection string
         public AzureTableService(string connectionString)
         {
             _tableServiceClient = new TableServiceClient(connectionString);
         }
 
-        // Customer Operations (unchanged)
+        // ===================== CUSTOMER OPERATIONS =====================
+
+        // Create a new customer in the table
         public async Task<CustomerProfile> CreateCustomerAsync(CustomerProfile customer)
         {
             var tableClient = _tableServiceClient.GetTableClient(_customerTableName);
             await tableClient.CreateIfNotExistsAsync();
 
+            // Assign a unique RowKey for the customer
             customer.RowKey = Guid.NewGuid().ToString();
+
             var response = await tableClient.AddEntityAsync(customer);
             return customer;
         }
 
+        // Retrieve a single customer by ID
         public async Task<CustomerProfile> GetCustomerAsync(string customerId)
         {
             var tableClient = _tableServiceClient.GetTableClient(_customerTableName);
@@ -32,6 +40,7 @@ namespace CloudDevPOE.Services
             return response.Value;
         }
 
+        // Get all customers from the table
         public async Task<List<CustomerProfile>> GetAllCustomersAsync()
         {
             var tableClient = _tableServiceClient.GetTableClient(_customerTableName);
@@ -45,6 +54,7 @@ namespace CloudDevPOE.Services
             return customers;
         }
 
+        // Update an existing customer
         public async Task<CustomerProfile> UpdateCustomerAsync(CustomerProfile customer)
         {
             var tableClient = _tableServiceClient.GetTableClient(_customerTableName);
@@ -52,13 +62,16 @@ namespace CloudDevPOE.Services
             return customer;
         }
 
+        // Delete a customer by ID
         public async Task DeleteCustomerAsync(string customerId)
         {
             var tableClient = _tableServiceClient.GetTableClient(_customerTableName);
             await tableClient.DeleteEntityAsync("Customer", customerId);
         }
 
-        // FIXED Product Operations - Using TableEntity to handle type conversions
+        // ===================== PRODUCT OPERATIONS =====================
+
+        // Create a new product in the table
         public async Task<Product> CreateProductAsync(Product product)
         {
             var tableClient = _tableServiceClient.GetTableClient(_productTableName);
@@ -69,24 +82,26 @@ namespace CloudDevPOE.Services
             return product;
         }
 
+        // Get a product by ID, handling possible type conversion issues
         public async Task<Product> GetProductAsync(string productId)
         {
             var tableClient = _tableServiceClient.GetTableClient(_productTableName);
 
             try
             {
-                // First try to get as Product directly
+                // Attempt to get as strongly typed Product
                 var response = await tableClient.GetEntityAsync<Product>("Product", productId);
                 return response.Value;
             }
             catch (InvalidCastException)
             {
-                // If that fails, get as TableEntity and convert manually
+                // If cast fails, get as TableEntity and convert manually
                 var entityResponse = await tableClient.GetEntityAsync<TableEntity>("Product", productId);
                 return ConvertTableEntityToProduct(entityResponse.Value);
             }
         }
 
+        // Retrieve all products
         public async Task<List<Product>> GetAllProductsAsync()
         {
             var tableClient = _tableServiceClient.GetTableClient(_productTableName);
@@ -94,7 +109,6 @@ namespace CloudDevPOE.Services
 
             try
             {
-                // First try to query as Product directly
                 await foreach (var product in tableClient.QueryAsync<Product>())
                 {
                     products.Add(product);
@@ -102,7 +116,7 @@ namespace CloudDevPOE.Services
             }
             catch (InvalidCastException)
             {
-                // If that fails, query as TableEntity and convert manually
+                // If direct cast fails, convert from TableEntity
                 await foreach (var entity in tableClient.QueryAsync<TableEntity>())
                 {
                     products.Add(ConvertTableEntityToProduct(entity));
@@ -112,6 +126,7 @@ namespace CloudDevPOE.Services
             return products;
         }
 
+        // Retrieve products by category
         public async Task<List<Product>> GetProductsByCategoryAsync(string category)
         {
             var tableClient = _tableServiceClient.GetTableClient(_productTableName);
@@ -119,7 +134,6 @@ namespace CloudDevPOE.Services
 
             try
             {
-                // First try to query as Product directly
                 await foreach (var product in tableClient.QueryAsync<Product>(p => p.Category == category))
                 {
                     products.Add(product);
@@ -127,7 +141,7 @@ namespace CloudDevPOE.Services
             }
             catch (InvalidCastException)
             {
-                // If that fails, get all entities and filter manually
+                // If direct cast fails, manually filter TableEntity results
                 await foreach (var entity in tableClient.QueryAsync<TableEntity>())
                 {
                     var product = ConvertTableEntityToProduct(entity);
@@ -141,6 +155,7 @@ namespace CloudDevPOE.Services
             return products;
         }
 
+        // Update an existing product
         public async Task<Product> UpdateProductAsync(Product product)
         {
             var tableClient = _tableServiceClient.GetTableClient(_productTableName);
@@ -148,13 +163,16 @@ namespace CloudDevPOE.Services
             return product;
         }
 
+        // Delete a product by ID
         public async Task DeleteProductAsync(string productId)
         {
             var tableClient = _tableServiceClient.GetTableClient(_productTableName);
             await tableClient.DeleteEntityAsync("Product", productId);
         }
 
-        // Helper method to convert TableEntity to Product with proper type handling
+        // ===================== HELPER METHODS =====================
+
+        // Converts a TableEntity to a strongly-typed Product with correct type handling
         private Product ConvertTableEntityToProduct(TableEntity entity)
         {
             var product = new Product
@@ -165,74 +183,51 @@ namespace CloudDevPOE.Services
                 ETag = entity.ETag
             };
 
-            // Handle ProductName
+            // Convert fields safely with type checks
             if (entity.ContainsKey("ProductName"))
                 product.ProductName = entity["ProductName"]?.ToString() ?? string.Empty;
 
-            // Handle Description
             if (entity.ContainsKey("Description"))
                 product.Description = entity["Description"]?.ToString() ?? string.Empty;
 
-            // Handle Price with type conversion
             if (entity.ContainsKey("Price"))
             {
                 var priceValue = entity["Price"];
                 if (priceValue is string priceStr && double.TryParse(priceStr, out double priceFromString))
-                {
                     product.Price = priceFromString;
-                }
                 else if (priceValue is double priceDouble)
-                {
                     product.Price = priceDouble;
-                }
                 else if (priceValue is decimal priceDecimal)
-                {
                     product.Price = (double)priceDecimal;
-                }
             }
 
-            // Handle StockQuantity with type conversion
             if (entity.ContainsKey("StockQuantity"))
             {
                 var stockValue = entity["StockQuantity"];
                 if (stockValue is string stockStr && int.TryParse(stockStr, out int stockFromString))
-                {
                     product.StockQuantity = stockFromString;
-                }
                 else if (stockValue is int stockInt)
-                {
                     product.StockQuantity = stockInt;
-                }
                 else if (stockValue is long stockLong)
-                {
                     product.StockQuantity = (int)stockLong;
-                }
             }
 
-            // Handle Category
             if (entity.ContainsKey("Category"))
                 product.Category = entity["Category"]?.ToString() ?? string.Empty;
 
-            // Handle ImageUrl
             if (entity.ContainsKey("ImageUrl"))
                 product.ImageUrl = entity["ImageUrl"]?.ToString() ?? string.Empty;
 
-            // Handle CreatedDate
             if (entity.ContainsKey("CreatedDate") && entity["CreatedDate"] is DateTime createdDate)
                 product.CreatedDate = createdDate;
 
-            // Handle IsAvailable
             if (entity.ContainsKey("IsAvailable"))
             {
                 var isAvailableValue = entity["IsAvailable"];
                 if (isAvailableValue is bool isAvailable)
-                {
                     product.IsAvailable = isAvailable;
-                }
                 else if (isAvailableValue is string isAvailableStr && bool.TryParse(isAvailableStr, out bool isAvailableFromString))
-                {
                     product.IsAvailable = isAvailableFromString;
-                }
             }
 
             return product;

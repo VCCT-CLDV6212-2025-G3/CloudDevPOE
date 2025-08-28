@@ -1,39 +1,86 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using CloudDevPOE.Models;
-using CloudDevPOE.Services;
+using Azure.Storage.Queues;
+using System.Text.Json;
 
 namespace CloudDevPOE.Controllers
 {
     public class QueueController : Controller
     {
-        private readonly AzureQueueService _queueService;
+        // Azure Storage connection string
+        private readonly string _connectionString;
 
-        public QueueController(AzureQueueService queueService)
+        // Constructor injects IConfiguration to get the Azure Storage connection string
+        public QueueController(IConfiguration configuration)
         {
-            _queueService = queueService;
+            _connectionString = configuration.GetConnectionString("AzureStorage") ?? "";
         }
 
         // GET: Queue
+        // Displays messages from queues and prepares new message objects for the view
         public async Task<IActionResult> Index()
         {
-            var orderMessages = await _queueService.PeekOrderMessagesAsync(10);
+            try
+            {
+                // Connect to the "order-processing" queue
+                var orderQueueClient = new QueueClient(_connectionString, "order-processing");
+                var orderMessages = new List<OrderMessage>();
 
-            ViewBag.OrderMessages = orderMessages;
-            ViewBag.NewOrderMessage = new OrderMessage { OrderId = Guid.NewGuid().ToString() };
-            ViewBag.NewInventoryMessage = new InventoryMessage();
-            ViewBag.NewImageMessage = new ImageProcessingMessage();
+                if (await orderQueueClient.ExistsAsync())
+                {
+                    // Peek at up to 10 messages without dequeuing
+                    var peekedMessages = await orderQueueClient.PeekMessagesAsync(10);
+                    foreach (var message in peekedMessages.Value)
+                    {
+                        try
+                        {
+                            // Deserialize the message body to an OrderMessage object
+                            var orderMessage = JsonSerializer.Deserialize<OrderMessage>(message.Body.ToString());
+                            if (orderMessage != null)
+                                orderMessages.Add(orderMessage);
+                        }
+                        catch
+                        {
+                            // Skip invalid messages that cannot be deserialized
+                        }
+                    }
+                }
 
-            return View();
+                // Pass messages and new empty message objects to the view
+                ViewBag.OrderMessages = orderMessages;
+                ViewBag.NewOrderMessage = new OrderMessage { OrderId = Guid.NewGuid().ToString() };
+                ViewBag.NewInventoryMessage = new InventoryMessage();
+                ViewBag.NewImageMessage = new ImageProcessingMessage();
+
+                return View();
+            }
+            catch (Exception ex)
+            {
+                // Handle errors and provide empty/default messages
+                ViewBag.ErrorMessage = $"Error loading queue data: {ex.Message}";
+                ViewBag.OrderMessages = new List<OrderMessage>();
+                ViewBag.NewOrderMessage = new OrderMessage { OrderId = Guid.NewGuid().ToString() };
+                ViewBag.NewInventoryMessage = new InventoryMessage();
+                ViewBag.NewImageMessage = new ImageProcessingMessage();
+
+                return View();
+            }
         }
 
         // POST: Queue/SendOrderMessage
+        // Sends a new order message to the "order-processing" queue
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SendOrderMessage(OrderMessage orderMessage)
         {
             try
             {
-                await _queueService.SendOrderMessageAsync(orderMessage);
+                var queueClient = new QueueClient(_connectionString, "order-processing");
+                await queueClient.CreateIfNotExistsAsync(); // Create queue if it doesn't exist
+
+                var messageJson = JsonSerializer.Serialize(orderMessage); // Convert object to JSON
+                await queueClient.SendMessageAsync(messageJson); // Send message to queue
+
                 TempData["Success"] = "Order message sent successfully!";
             }
             catch (Exception ex)
@@ -45,13 +92,19 @@ namespace CloudDevPOE.Controllers
         }
 
         // POST: Queue/SendInventoryMessage
+        // Sends a new inventory message to the "inventory-management" queue
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SendInventoryMessage(InventoryMessage inventoryMessage)
         {
             try
             {
-                await _queueService.SendInventoryMessageAsync(inventoryMessage);
+                var queueClient = new QueueClient(_connectionString, "inventory-management");
+                await queueClient.CreateIfNotExistsAsync(); // Create queue if needed
+
+                var messageJson = JsonSerializer.Serialize(inventoryMessage); // Convert object to JSON
+                await queueClient.SendMessageAsync(messageJson); // Send message
+
                 TempData["Success"] = "Inventory message sent successfully!";
             }
             catch (Exception ex)
@@ -63,13 +116,19 @@ namespace CloudDevPOE.Controllers
         }
 
         // POST: Queue/SendImageMessage
+        // Sends a new image processing message to the "image-processing" queue
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SendImageMessage(ImageProcessingMessage imageMessage)
         {
             try
             {
-                await _queueService.SendImageProcessingMessageAsync(imageMessage);
+                var queueClient = new QueueClient(_connectionString, "image-processing");
+                await queueClient.CreateIfNotExistsAsync(); // Ensure queue exists
+
+                var messageJson = JsonSerializer.Serialize(imageMessage); // Serialize message
+                await queueClient.SendMessageAsync(messageJson); // Send message
+
                 TempData["Success"] = "Image processing message sent successfully!";
             }
             catch (Exception ex)
@@ -81,16 +140,25 @@ namespace CloudDevPOE.Controllers
         }
 
         // POST: Queue/ProcessOrderMessage
+        // Retrieves and processes a single order message from the queue
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessOrderMessage()
         {
             try
             {
-                var message = await _queueService.ReceiveOrderMessageAsync();
-                if (message != null)
+                var queueClient = new QueueClient(_connectionString, "order-processing");
+                var response = await queueClient.ReceiveMessageAsync(); // Receive one message
+
+                if (response.Value != null)
                 {
-                    TempData["Success"] = $"Processed order message: {message.OrderId}";
+                    var message = response.Value;
+                    var orderMessage = JsonSerializer.Deserialize<OrderMessage>(message.Body.ToString());
+
+                    // Delete the message after processing
+                    await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+
+                    TempData["Success"] = $"Processed order message: {orderMessage?.OrderId ?? "Unknown"}";
                 }
                 else
                 {
@@ -106,16 +174,25 @@ namespace CloudDevPOE.Controllers
         }
 
         // POST: Queue/ProcessInventoryMessage
+        // Retrieves and processes a single inventory message
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessInventoryMessage()
         {
             try
             {
-                var message = await _queueService.ReceiveInventoryMessageAsync();
-                if (message != null)
+                var queueClient = new QueueClient(_connectionString, "inventory-management");
+                var response = await queueClient.ReceiveMessageAsync(); // Receive one message
+
+                if (response.Value != null)
                 {
-                    TempData["Success"] = $"Processed inventory message for product: {message.ProductId}";
+                    var message = response.Value;
+                    var inventoryMessage = JsonSerializer.Deserialize<InventoryMessage>(message.Body.ToString());
+
+                    // Delete after processing
+                    await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+
+                    TempData["Success"] = $"Processed inventory message for product: {inventoryMessage?.ProductId ?? "Unknown"}";
                 }
                 else
                 {
@@ -131,16 +208,25 @@ namespace CloudDevPOE.Controllers
         }
 
         // POST: Queue/ProcessImageMessage
+        // Retrieves and processes a single image processing message
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessImageMessage()
         {
             try
             {
-                var message = await _queueService.ReceiveImageProcessingMessageAsync();
-                if (message != null)
+                var queueClient = new QueueClient(_connectionString, "image-processing");
+                var response = await queueClient.ReceiveMessageAsync(); // Receive one message
+
+                if (response.Value != null)
                 {
-                    TempData["Success"] = $"Processed image message: {message.ImageName}";
+                    var message = response.Value;
+                    var imageMessage = JsonSerializer.Deserialize<ImageProcessingMessage>(message.Body.ToString());
+
+                    // Delete the message after processing
+                    await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+
+                    TempData["Success"] = $"Processed image message: {imageMessage?.ImageName ?? "Unknown"}";
                 }
                 else
                 {
