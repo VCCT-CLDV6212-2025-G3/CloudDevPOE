@@ -8,7 +8,7 @@ var host = new HostBuilder()
 
 host.Run();
 
-/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
 //References
 //Functions - https://www.thoughtco.com/introduction-to-functions-in-c-958367
 //Azure Functions - https://learn.microsoft.com/en-us/azure/azure-functions/functions-overview?tabs=dotnet
