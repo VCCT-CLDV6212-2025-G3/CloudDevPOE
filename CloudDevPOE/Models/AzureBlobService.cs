@@ -24,7 +24,7 @@ namespace CloudDevPOE.Services
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
             // Create container if it does not exist, allow public access for blobs
-            await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+            await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
             // Create a unique blob name inside the 'images' folder
             var blobName = $"images/{Guid.NewGuid()}_{fileName}";
@@ -72,7 +72,7 @@ namespace CloudDevPOE.Services
         public async Task<string> UploadDocumentAsync(Stream documentStream, string fileName, string contentType)
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+            await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
             var blobName = $"documents/{Guid.NewGuid()}_{fileName}";
             var blobClient = containerClient.GetBlobClient(blobName);
