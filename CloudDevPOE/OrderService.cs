@@ -11,27 +11,27 @@ namespace CloudDevPOE.Services
 
         public OrderService(ApplicationDbContext context, CartService cartService)
         {
-            _context = context;
-            _cartService = cartService;
+            _context = context; // Inject DbContext for database access
+            _cartService = cartService; // Inject CartService to access cart operations
         }
 
-        // Create order from cart
+        // Create an order from the customer's cart
         public async Task<(bool Success, string Message, Order? Order)> CreateOrderFromCartAsync(int customerId, string? shippingAddress, string? notes)
         {
             try
             {
-                // Get cart with items
+                // Get cart with items for the customer
                 var cart = await _cartService.GetCartWithItemsAsync(customerId);
 
                 if (cart == null || !cart.CartItems.Any())
                 {
-                    return (false, "Cart is empty", null);
+                    return (false, "Cart is empty", null); // Cannot create order if cart is empty
                 }
 
-                // Generate unique order number
+                // Generate a unique order number
                 string orderNumber = $"ORD-{DateTime.UtcNow:yyyyMMddHHmmss}-{customerId}";
 
-                // Create order
+                // Create a new order
                 var order = new Order
                 {
                     OrderNumber = orderNumber,
@@ -46,7 +46,7 @@ namespace CloudDevPOE.Services
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
 
-                // Create order items from cart items
+                // Convert each cart item into an order item
                 foreach (var cartItem in cart.CartItems)
                 {
                     var orderItem = new OrderItem
@@ -64,7 +64,7 @@ namespace CloudDevPOE.Services
 
                 await _context.SaveChangesAsync();
 
-                // Clear the cart
+                // Clear the cart after placing the order
                 await _cartService.ClearCartAsync(customerId);
 
                 return (true, "Order placed successfully", order);
@@ -75,7 +75,7 @@ namespace CloudDevPOE.Services
             }
         }
 
-        // Get order by ID
+        // Get order by ID including customer and items
         public async Task<Order?> GetOrderByIdAsync(int orderId)
         {
             return await _context.Orders
@@ -95,7 +95,7 @@ namespace CloudDevPOE.Services
                 .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
         }
 
-        // Get all orders for a customer
+        // Get all orders for a specific customer
         public async Task<List<Order>> GetCustomerOrdersAsync(int customerId)
         {
             return await _context.Orders
@@ -105,7 +105,7 @@ namespace CloudDevPOE.Services
                 .ToListAsync();
         }
 
-        // Get all orders (for admin)
+        // Get all orders (admin view)
         public async Task<List<Order>> GetAllOrdersAsync()
         {
             return await _context.Orders
@@ -116,7 +116,7 @@ namespace CloudDevPOE.Services
                 .ToListAsync();
         }
 
-        // Get orders by status
+        // Get orders filtered by status
         public async Task<List<Order>> GetOrdersByStatusAsync(string status)
         {
             return await _context.Orders
@@ -128,7 +128,7 @@ namespace CloudDevPOE.Services
                 .ToListAsync();
         }
 
-        // Update order status (Admin only)
+        // Update the status of an order (admin only)
         public async Task<(bool Success, string Message)> UpdateOrderStatusAsync(int orderId, string newStatus, int adminUserId)
         {
             try
@@ -140,7 +140,7 @@ namespace CloudDevPOE.Services
                     return (false, "Order not found");
                 }
 
-                // Validate status
+                // Validate new status
                 var validStatuses = new[] { "PENDING", "PROCESSED", "SHIPPED", "DELIVERED", "CANCELLED" };
                 if (!validStatuses.Contains(newStatus.ToUpper()))
                 {
@@ -149,6 +149,7 @@ namespace CloudDevPOE.Services
 
                 order.Status = newStatus.ToUpper();
 
+                // Set processed date and admin ID if status is processed
                 if (newStatus.ToUpper() == "PROCESSED")
                 {
                     order.ProcessedDate = DateTime.UtcNow;
@@ -164,7 +165,7 @@ namespace CloudDevPOE.Services
             }
         }
 
-        // Cancel order (Customer can cancel pending orders)
+        // Cancel an order (only pending orders can be cancelled by customer)
         public async Task<(bool Success, string Message)> CancelOrderAsync(int orderId, int customerId)
         {
             try
@@ -193,7 +194,7 @@ namespace CloudDevPOE.Services
             }
         }
 
-        // Get order statistics (for admin dashboard)
+        // Get summary statistics for orders (for admin dashboard)
         public async Task<OrderStatistics> GetOrderStatisticsAsync()
         {
             var allOrders = await _context.Orders.ToListAsync();
@@ -211,15 +212,15 @@ namespace CloudDevPOE.Services
         }
     }
 
-    // Helper class for order statistics
+    // Helper class to store order statistics for admin dashboard
     public class OrderStatistics
     {
-        public int TotalOrders { get; set; }
-        public int PendingOrders { get; set; }
-        public int ProcessedOrders { get; set; }
-        public int ShippedOrders { get; set; }
-        public int DeliveredOrders { get; set; }
-        public int CancelledOrders { get; set; }
-        public decimal TotalRevenue { get; set; }
+        public int TotalOrders { get; set; }          // Total number of orders
+        public int PendingOrders { get; set; }        // Count of pending orders
+        public int ProcessedOrders { get; set; }      // Count of processed orders
+        public int ShippedOrders { get; set; }        // Count of shipped orders
+        public int DeliveredOrders { get; set; }      // Count of delivered orders
+        public int CancelledOrders { get; set; }      // Count of cancelled orders
+        public decimal TotalRevenue { get; set; }     // Total revenue from completed orders
     }
 }

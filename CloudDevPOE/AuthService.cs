@@ -11,7 +11,7 @@ namespace CloudDevPOE.Services
 
         public AuthService(ApplicationDbContext context)
         {
-            _context = context;
+            _context = context; // Inject DbContext for database operations
         }
 
         // Register a new customer
@@ -45,12 +45,12 @@ namespace CloudDevPOE.Services
 
                 Console.WriteLine($"[DEBUG] Creating user: {username}");
 
-                // Step 1: Create user
+                // Step 1: Create user entity
                 var user = new User
                 {
                     Username = username,
                     Email = model.Email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password), // Hash password
                     Role = "Customer",
                     IsActive = true,
                     CreatedDate = DateTime.UtcNow
@@ -58,7 +58,6 @@ namespace CloudDevPOE.Services
 
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
-
                 Console.WriteLine($"[DEBUG] ✅ User created with UserId: {user.UserId}");
 
                 // Step 2: Create customer profile
@@ -76,10 +75,9 @@ namespace CloudDevPOE.Services
 
                 _context.Customers.Add(customer);
                 await _context.SaveChangesAsync();
-
                 Console.WriteLine($"[DEBUG] ✅ Customer created with CustomerId: {customer.CustomerId}");
 
-                // Step 3: Create empty cart
+                // Step 3: Create empty cart for customer
                 var cart = new Cart
                 {
                     CustomerId = customer.CustomerId,
@@ -89,19 +87,17 @@ namespace CloudDevPOE.Services
 
                 _context.Carts.Add(cart);
                 await _context.SaveChangesAsync();
-
                 Console.WriteLine($"[DEBUG] ✅ Cart created with CartId: {cart.CartId}");
 
-                // Commit transaction
+                // Commit transaction to persist all changes
                 await transaction.CommitAsync();
-
                 Console.WriteLine($"[DEBUG] ✅ Registration complete! UserId={user.UserId}, CustomerId={customer.CustomerId}, CartId={cart.CartId}");
 
                 return (true, "Registration successful", user);
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync(); // Rollback if anything fails
                 Console.WriteLine($"[ERROR] Registration failed: {ex.Message}");
                 Console.WriteLine($"[ERROR] Inner: {ex.InnerException?.Message}");
                 return (false, $"Registration failed: {ex.Message}", null);
@@ -115,7 +111,7 @@ namespace CloudDevPOE.Services
             {
                 Console.WriteLine($"[DEBUG] Login attempt for: {model.Email}");
 
-                // Find user by email
+                // Find active user by email
                 var user = await _context.Users
                     .FirstOrDefaultAsync(u => u.Email == model.Email && u.IsActive);
 
@@ -127,9 +123,8 @@ namespace CloudDevPOE.Services
 
                 Console.WriteLine($"[DEBUG] User found. Verifying password...");
 
-                // Verify password
+                // Verify password using BCrypt
                 bool isPasswordValid = BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash);
-
                 Console.WriteLine($"[DEBUG] Password valid: {isPasswordValid}");
 
                 if (!isPasswordValid)
@@ -141,7 +136,7 @@ namespace CloudDevPOE.Services
                 user.LastLoginDate = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
-                // Get customer profile if user is a customer
+                // Load customer profile if user role is Customer
                 Customer? customer = null;
                 if (user.Role == "Customer")
                 {
@@ -166,18 +161,19 @@ namespace CloudDevPOE.Services
         {
             try
             {
+                // Check if email is already registered
                 if (await _context.Users.AnyAsync(u => u.Email == email))
                 {
                     return (false, "Email is already registered");
                 }
 
-                string username = email.Split('@')[0] + "_admin";
+                string username = email.Split('@')[0] + "_admin"; // Generate admin username
 
                 var user = new User
                 {
                     Username = username,
                     Email = email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(password), // Hash password
                     Role = "Admin",
                     IsActive = true,
                     CreatedDate = DateTime.UtcNow
@@ -186,6 +182,7 @@ namespace CloudDevPOE.Services
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
+                // Create customer record for admin (optional)
                 var customer = new Customer
                 {
                     UserId = user.UserId,
@@ -207,14 +204,14 @@ namespace CloudDevPOE.Services
         // Get user by ID
         public async Task<User?> GetUserByIdAsync(int userId)
         {
-            return await _context.Users.FindAsync(userId);
+            return await _context.Users.FindAsync(userId); // Fetch user by primary key
         }
 
         // Get customer by user ID
         public async Task<Customer?> GetCustomerByUserIdAsync(int userId)
         {
             return await _context.Customers
-                .Include(c => c.User)
+                .Include(c => c.User) // Include related User data
                 .FirstOrDefaultAsync(c => c.UserId == userId);
         }
     }

@@ -3,36 +3,36 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CloudDevPOE.Models
 {
-    [Table("Users")]
+    [Table("Users")] // Maps this class to the "Users" table in the database
     public class User
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [Key] // Marks this property as the primary key
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Auto-increment identity column
         public int UserId { get; set; }
 
-        [Required]
-        [StringLength(100)]
-        public string Username { get; set; } = string.Empty;
+        [Required] // Field must be supplied
+        [StringLength(100)] // Maximum length of 100 characters
+        public string Username { get; set; } = string.Empty; // Stores the username
 
-        [Required]
-        [EmailAddress]
-        [StringLength(255)]
-        public string Email { get; set; } = string.Empty;
+        [Required] // Field must be supplied
+        [EmailAddress] // Ensures value is in valid email format
+        [StringLength(255)] // Max length of 255 characters
+        public string Email { get; set; } = string.Empty; // Stores user's email
 
-        [Required]
-        public string PasswordHash { get; set; } = string.Empty;
+        [Required] // Field must be supplied
+        public string PasswordHash { get; set; } = string.Empty; // Stores the hashed password
 
-        [Required]
-        [StringLength(50)]
-        public string Role { get; set; } = "Customer"; // "Customer" or "Admin"
+        [Required] // Field must be supplied
+        [StringLength(50)] // Limits role string to 50 characters
+        public string Role { get; set; } = "Customer"; // User role ("Customer" or "Admin")
 
-        public bool IsActive { get; set; } = true;
+        public bool IsActive { get; set; } = true; // Indicates if the user account is active
 
-        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow; // Timestamp when the account was created
 
-        public DateTime? LastLoginDate { get; set; }
+        public DateTime? LastLoginDate { get; set; } // Nullable - stores last login date
 
-        // Navigation property
+        // Navigation property for related Customer record (1-to-1 relationship)
         public virtual Customer? Customer { get; set; }
     }
 }

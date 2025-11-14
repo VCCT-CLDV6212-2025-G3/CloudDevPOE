@@ -3,46 +3,47 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CloudDevPOE.Models
 {
-    [Table("Orders")]
+    [Table("Orders")] // Maps this model to the "Orders" table
     public class Order
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [Key] // Primary key of the Orders table
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Auto-increment identity column
         public int OrderId { get; set; }
 
         [Required]
-        [StringLength(50)]
-        public string OrderNumber { get; set; } = string.Empty;
+        [StringLength(50)] // Max length of 50 characters
+        public string OrderNumber { get; set; } = string.Empty; // Unique order reference number
 
-        [Required]
+        [Required] // Foreign key linking to Customer
         public int CustomerId { get; set; }
 
-        public DateTime OrderDate { get; set; } = DateTime.UtcNow;
+        public DateTime OrderDate { get; set; } = DateTime.UtcNow; // Date the order was created
 
         [Required]
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal TotalAmount { get; set; }
+        [Column(TypeName = "decimal(18,2)")] // Proper decimal precision/scale in SQL
+        public decimal TotalAmount { get; set; } // Total cost of the order
 
         [Required]
-        [StringLength(50)]
-        public string Status { get; set; } = "PENDING"; // PENDING, PROCESSED, SHIPPED, DELIVERED, CANCELLED
+        [StringLength(50)] // Max length of 50 characters
+        public string Status { get; set; } = "PENDING"; // Order status: PENDING, PROCESSED, SHIPPED, etc.
 
-        [StringLength(500)]
-        public string? ShippingAddress { get; set; }
+        [StringLength(500)] // Max length of 500 characters
+        public string? ShippingAddress { get; set; } // Optional shipping address
 
-        public string? Notes { get; set; }
+        public string? Notes { get; set; } // Optional additional order notes
 
-        public DateTime? ProcessedDate { get; set; }
+        public DateTime? ProcessedDate { get; set; } // When the order was processed (nullable)
 
-        public int? ProcessedBy { get; set; }
+        public int? ProcessedBy { get; set; } // UserId of the admin who processed the order (nullable)
 
         // Navigation properties
-        [ForeignKey("CustomerId")]
+
+        [ForeignKey("CustomerId")] // Defines relation to Customer
         public virtual Customer? Customer { get; set; }
 
-        [ForeignKey("ProcessedBy")]
+        [ForeignKey("ProcessedBy")] // Defines relation to User who processed the order
         public virtual User? ProcessedByUser { get; set; }
 
-        public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+        public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>(); // Collection of items in the order
     }
 }

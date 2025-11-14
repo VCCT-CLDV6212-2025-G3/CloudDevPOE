@@ -10,7 +10,7 @@ namespace CloudDevPOE.Data
         {
         }
 
-        // DbSet properties for each table
+        // DbSet properties represent tables in the database
         public DbSet<User> Users { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Cart> Carts { get; set; }
@@ -25,66 +25,66 @@ namespace CloudDevPOE.Data
             // Configure User entity
             modelBuilder.Entity<User>(entity =>
             {
-                entity.HasKey(e => e.UserId);
-                entity.HasIndex(e => e.Email).IsUnique();
-                entity.HasIndex(e => e.Username).IsUnique();
-                entity.Property(e => e.Role).HasMaxLength(50);
+                entity.HasKey(e => e.UserId); // Primary key
+                entity.HasIndex(e => e.Email).IsUnique(); // Email must be unique
+                entity.HasIndex(e => e.Username).IsUnique(); // Username must be unique
+                entity.Property(e => e.Role).HasMaxLength(50); // Limit Role string to 50 chars
             });
 
             // Configure Customer entity
             modelBuilder.Entity<Customer>(entity =>
             {
-                entity.HasKey(e => e.CustomerId);
-                entity.HasOne(e => e.User)
+                entity.HasKey(e => e.CustomerId); // Primary key
+                entity.HasOne(e => e.User) // One-to-one relationship with User
                       .WithOne(u => u.Customer)
                       .HasForeignKey<Customer>(e => e.UserId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Cascade); // Deleting a User deletes the Customer
             });
 
             // Configure Cart entity
             modelBuilder.Entity<Cart>(entity =>
             {
-                entity.HasKey(e => e.CartId);
-                entity.HasOne(e => e.Customer)
+                entity.HasKey(e => e.CartId); // Primary key
+                entity.HasOne(e => e.Customer) // One-to-one relationship with Customer
                       .WithOne(c => c.Cart)
                       .HasForeignKey<Cart>(e => e.CustomerId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Cascade); // Deleting a Customer deletes the Cart
             });
 
             // Configure CartItem entity
             modelBuilder.Entity<CartItem>(entity =>
             {
-                entity.HasKey(e => e.CartItemId);
-                entity.HasOne(e => e.Cart)
+                entity.HasKey(e => e.CartItemId); // Primary key
+                entity.HasOne(e => e.Cart) // Many CartItems belong to one Cart
                       .WithMany(c => c.CartItems)
                       .HasForeignKey(e => e.CartId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Cascade); // Deleting a Cart deletes its items
             });
 
             // Configure Order entity
             modelBuilder.Entity<Order>(entity =>
             {
-                entity.HasKey(e => e.OrderId);
-                entity.HasIndex(e => e.OrderNumber).IsUnique();
-                entity.HasOne(e => e.Customer)
+                entity.HasKey(e => e.OrderId); // Primary key
+                entity.HasIndex(e => e.OrderNumber).IsUnique(); // OrderNumber must be unique
+                entity.HasOne(e => e.Customer) // Many Orders belong to one Customer
                       .WithMany(c => c.Orders)
                       .HasForeignKey(e => e.CustomerId)
-                      .OnDelete(DeleteBehavior.Restrict);
-                entity.HasOne(e => e.ProcessedByUser)
+                      .OnDelete(DeleteBehavior.Restrict); // Prevent deletion if orders exist
+                entity.HasOne(e => e.ProcessedByUser) // Optional reference to User who processed the order
                       .WithMany()
                       .HasForeignKey(e => e.ProcessedBy)
-                      .OnDelete(DeleteBehavior.Restrict);
-                entity.Property(e => e.Status).HasMaxLength(50);
+                      .OnDelete(DeleteBehavior.Restrict); // Prevent deletion if user processed orders
+                entity.Property(e => e.Status).HasMaxLength(50); // Limit Status string to 50 chars
             });
 
             // Configure OrderItem entity
             modelBuilder.Entity<OrderItem>(entity =>
             {
-                entity.HasKey(e => e.OrderItemId);
-                entity.HasOne(e => e.Order)
+                entity.HasKey(e => e.OrderItemId); // Primary key
+                entity.HasOne(e => e.Order) // Many OrderItems belong to one Order
                       .WithMany(o => o.OrderItems)
                       .HasForeignKey(e => e.OrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Cascade); // Deleting an Order deletes its items
             });
         }
     }

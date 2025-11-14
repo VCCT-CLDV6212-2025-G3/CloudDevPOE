@@ -10,18 +10,19 @@ namespace CloudDevPOE.Services
 
         public CartService(ApplicationDbContext context)
         {
-            _context = context;
+            _context = context; // Inject DbContext for database access
         }
 
-        // Get or create cart for customer
+        // Get existing cart or create a new cart for a customer
         public async Task<Cart> GetOrCreateCartAsync(int customerId)
         {
             var cart = await _context.Carts
-                .Include(c => c.CartItems)
+                .Include(c => c.CartItems) // Include cart items in query
                 .FirstOrDefaultAsync(c => c.CustomerId == customerId);
 
             if (cart == null)
             {
+                // Create a new cart if none exists
                 cart = new Cart
                 {
                     CustomerId = customerId,
@@ -36,7 +37,7 @@ namespace CloudDevPOE.Services
             return cart;
         }
 
-        // Add item to cart
+        // Add an item to the customer's cart
         public async Task<(bool Success, string Message)> AddToCartAsync(int customerId, string productId, string productName, decimal price, int quantity, string? imageUrl)
         {
             try
@@ -49,13 +50,13 @@ namespace CloudDevPOE.Services
 
                 if (existingItem != null)
                 {
-                    // Update quantity
+                    // Update quantity if item exists
                     existingItem.Quantity += quantity;
                     cart.UpdatedDate = DateTime.UtcNow;
                 }
                 else
                 {
-                    // Add new item
+                    // Add new cart item if not exists
                     var cartItem = new CartItem
                     {
                         CartId = cart.CartId,
@@ -80,13 +81,13 @@ namespace CloudDevPOE.Services
             }
         }
 
-        // Update cart item quantity
+        // Update quantity of a cart item
         public async Task<(bool Success, string Message)> UpdateCartItemQuantityAsync(int cartItemId, int quantity)
         {
             try
             {
                 var cartItem = await _context.CartItems
-                    .Include(ci => ci.Cart)
+                    .Include(ci => ci.Cart) // Include parent cart to update timestamp
                     .FirstOrDefaultAsync(ci => ci.CartItemId == cartItemId);
 
                 if (cartItem == null)
@@ -102,7 +103,7 @@ namespace CloudDevPOE.Services
                 cartItem.Quantity = quantity;
                 if (cartItem.Cart != null)
                 {
-                    cartItem.Cart.UpdatedDate = DateTime.UtcNow;
+                    cartItem.Cart.UpdatedDate = DateTime.UtcNow; // Update cart timestamp
                 }
 
                 await _context.SaveChangesAsync();
@@ -114,13 +115,13 @@ namespace CloudDevPOE.Services
             }
         }
 
-        // Remove item from cart
+        // Remove an item from the cart
         public async Task<(bool Success, string Message)> RemoveFromCartAsync(int cartItemId)
         {
             try
             {
                 var cartItem = await _context.CartItems
-                    .Include(ci => ci.Cart)
+                    .Include(ci => ci.Cart) // Include parent cart
                     .FirstOrDefaultAsync(ci => ci.CartItemId == cartItemId);
 
                 if (cartItem == null)
@@ -132,7 +133,7 @@ namespace CloudDevPOE.Services
 
                 if (cartItem.Cart != null)
                 {
-                    cartItem.Cart.UpdatedDate = DateTime.UtcNow;
+                    cartItem.Cart.UpdatedDate = DateTime.UtcNow; // Update cart timestamp
                 }
 
                 await _context.SaveChangesAsync();
@@ -144,21 +145,21 @@ namespace CloudDevPOE.Services
             }
         }
 
-        // Get cart with items for customer
+        // Get cart along with its items for a specific customer
         public async Task<Cart?> GetCartWithItemsAsync(int customerId)
         {
             return await _context.Carts
-                .Include(c => c.CartItems)
+                .Include(c => c.CartItems) // Include items
                 .FirstOrDefaultAsync(c => c.CustomerId == customerId);
         }
 
-        // Clear cart
+        // Clear all items from a customer's cart
         public async Task<(bool Success, string Message)> ClearCartAsync(int customerId)
         {
             try
             {
                 var cart = await _context.Carts
-                    .Include(c => c.CartItems)
+                    .Include(c => c.CartItems) // Include items to remove
                     .FirstOrDefaultAsync(c => c.CustomerId == customerId);
 
                 if (cart == null)
@@ -167,7 +168,7 @@ namespace CloudDevPOE.Services
                 }
 
                 _context.CartItems.RemoveRange(cart.CartItems);
-                cart.UpdatedDate = DateTime.UtcNow;
+                cart.UpdatedDate = DateTime.UtcNow; // Update cart timestamp
                 await _context.SaveChangesAsync();
 
                 return (true, "Cart cleared successfully");
@@ -178,14 +179,14 @@ namespace CloudDevPOE.Services
             }
         }
 
-        // Get cart item count for customer
+        // Get total quantity of items in the cart for a customer
         public async Task<int> GetCartItemCountAsync(int customerId)
         {
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .FirstOrDefaultAsync(c => c.CustomerId == customerId);
 
-            return cart?.CartItems.Sum(ci => ci.Quantity) ?? 0;
+            return cart?.CartItems.Sum(ci => ci.Quantity) ?? 0; // Return 0 if cart is empty
         }
     }
 }

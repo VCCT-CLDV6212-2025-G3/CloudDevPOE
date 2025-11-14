@@ -5,39 +5,44 @@ using System.Security.Claims;
 
 namespace CloudDevPOE.Controllers
 {
+    // All actions require authentication
     [Authorize]
     public class OrderController : Controller
     {
         private readonly OrderService _orderService;
         private readonly CartService _cartService;
 
+        // Constructor injection of services
         public OrderController(OrderService orderService, CartService cartService)
         {
             _orderService = orderService;
             _cartService = cartService;
         }
 
-        // Helper method to get current customer ID
+        // Helper method to get the current customer's ID from claims
         private int GetCustomerId()
         {
             var customerIdClaim = User.FindFirst("CustomerId")?.Value;
-            return int.Parse(customerIdClaim ?? "0");
+            return int.Parse(customerIdClaim ?? "0"); // Defaults to 0 if claim not found
         }
 
-        // Helper method to get current user ID
+        // Helper method to get the current user's ID from claims
         private int GetUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.Parse(userIdClaim ?? "0");
         }
 
-        // Helper method to check if user is admin
+        // Helper method to check if current user is an Admin
         private bool IsAdmin()
         {
             return User.IsInRole("Admin");
         }
 
-        // GET: Order/Index - Customer's order history
+        // ==================== CUSTOMER ACTIONS ====================
+
+        // GET: Order/Index
+        // Shows the authenticated customer's order history
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> Index()
         {
@@ -54,7 +59,8 @@ namespace CloudDevPOE.Controllers
             }
         }
 
-        // GET: Order/Details/5
+        // GET: Order/Details/{id}
+        // Shows details of a specific order
         public async Task<IActionResult> Details(int id)
         {
             try
@@ -67,7 +73,7 @@ namespace CloudDevPOE.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // Check if user has permission to view this order
+                // Ensure customer can only view their own orders
                 if (!IsAdmin() && order.CustomerId != GetCustomerId())
                 {
                     TempData["Error"] = "You do not have permission to view this order";
@@ -84,6 +90,7 @@ namespace CloudDevPOE.Controllers
         }
 
         // POST: Order/PlaceOrder
+        // Places a new order from the customer's cart
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Customer")]
@@ -93,7 +100,7 @@ namespace CloudDevPOE.Controllers
             {
                 int customerId = GetCustomerId();
 
-                // Validate cart is not empty
+                // Ensure cart has items
                 var cart = await _cartService.GetCartWithItemsAsync(customerId);
                 if (cart == null || !cart.CartItems.Any())
                 {
@@ -101,6 +108,7 @@ namespace CloudDevPOE.Controllers
                     return RedirectToAction("Index", "Cart");
                 }
 
+                // Create order via OrderService
                 var result = await _orderService.CreateOrderFromCartAsync(customerId, shippingAddress, notes);
 
                 if (result.Success && result.Order != null)
@@ -121,7 +129,8 @@ namespace CloudDevPOE.Controllers
             }
         }
 
-        // GET: Order/OrderConfirmation/5
+        // GET: Order/OrderConfirmation/{id}
+        // Shows the confirmation page for a placed order
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> OrderConfirmation(int id)
         {
@@ -135,7 +144,7 @@ namespace CloudDevPOE.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // Verify this order belongs to the current customer
+                // Ensure customer can only view their own order
                 if (order.CustomerId != GetCustomerId())
                 {
                     TempData["Error"] = "You do not have permission to view this order";
@@ -151,7 +160,8 @@ namespace CloudDevPOE.Controllers
             }
         }
 
-        // POST: Order/CancelOrder/5
+        // POST: Order/CancelOrder/{id}
+        // Allows a customer to cancel a pending order
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Customer")]
@@ -163,13 +173,9 @@ namespace CloudDevPOE.Controllers
                 var result = await _orderService.CancelOrderAsync(id, customerId);
 
                 if (result.Success)
-                {
                     TempData["Success"] = result.Message;
-                }
                 else
-                {
                     TempData["Error"] = result.Message;
-                }
 
                 return RedirectToAction(nameof(Details), new { id });
             }
@@ -182,7 +188,8 @@ namespace CloudDevPOE.Controllers
 
         // ==================== ADMIN ACTIONS ====================
 
-        // GET: Order/AdminDashboard - Admin view of all orders
+        // GET: Order/AdminDashboard
+        // Displays all orders to admin, optionally filtered by status
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AdminDashboard(string? status = null)
         {
@@ -190,16 +197,13 @@ namespace CloudDevPOE.Controllers
             {
                 List<CloudDevPOE.Models.Order> orders;
 
+                // Get all orders or filter by status
                 if (string.IsNullOrEmpty(status))
-                {
                     orders = await _orderService.GetAllOrdersAsync();
-                }
                 else
-                {
                     orders = await _orderService.GetOrdersByStatusAsync(status);
-                }
 
-                // Get statistics
+                // Retrieve order statistics for dashboard
                 var statistics = await _orderService.GetOrderStatisticsAsync();
                 ViewBag.Statistics = statistics;
                 ViewBag.SelectedStatus = status;
@@ -214,6 +218,7 @@ namespace CloudDevPOE.Controllers
         }
 
         // POST: Order/UpdateStatus
+        // Allows admin to update the status of an order
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
@@ -225,13 +230,9 @@ namespace CloudDevPOE.Controllers
                 var result = await _orderService.UpdateOrderStatusAsync(orderId, newStatus, adminUserId);
 
                 if (result.Success)
-                {
                     TempData["Success"] = result.Message;
-                }
                 else
-                {
                     TempData["Error"] = result.Message;
-                }
 
                 return RedirectToAction(nameof(Details), new { id = orderId });
             }
@@ -242,7 +243,8 @@ namespace CloudDevPOE.Controllers
             }
         }
 
-        // GET: Order/AdminOrderDetails/5 - Detailed admin view
+        // GET: Order/AdminOrderDetails/{id}
+        // Admin view of a single order with full details
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AdminOrderDetails(int id)
         {
