@@ -1,12 +1,7 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using CloudDevPOE.Data;
+﻿using CloudDevPOE.Data;
 using CloudDevPOE.Models;
 using CloudDevPOE.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
-using BCrypt.Net;
-using Org.BouncyCastle.Crypto.Generators;
 
 namespace CloudDevPOE.Services
 {
@@ -22,10 +17,16 @@ namespace CloudDevPOE.Services
         // Register a new customer
         public async Task<(bool Success, string Message, User? User)> RegisterCustomerAsync(RegisterViewModel model)
         {
+            // Use a transaction to ensure all operations succeed or fail together
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
+                Console.WriteLine($"[DEBUG] Starting registration for: {model.Email}");
+
                 // Check if email already exists
-                if (await _context.Users.AnyAsync(u => u.Email == model.Email))
+                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+                if (existingUser != null)
                 {
                     return (false, "Email is already registered", null);
                 }
@@ -42,7 +43,9 @@ namespace CloudDevPOE.Services
                     counter++;
                 }
 
-                // Create user with hashed password
+                Console.WriteLine($"[DEBUG] Creating user: {username}");
+
+                // Step 1: Create user
                 var user = new User
                 {
                     Username = username,
@@ -56,12 +59,14 @@ namespace CloudDevPOE.Services
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                // Create customer profile
+                Console.WriteLine($"[DEBUG] ✅ User created with UserId: {user.UserId}");
+
+                // Step 2: Create customer profile
                 var customer = new Customer
                 {
                     UserId = user.UserId,
-                    FirstName = model.FirstName,
-                    LastName = model.LastName,
+                    FirstName = string.IsNullOrWhiteSpace(model.FirstName) ? "Customer" : model.FirstName,
+                    LastName = string.IsNullOrWhiteSpace(model.LastName) ? "User" : model.LastName,
                     PhoneNumber = model.PhoneNumber,
                     Address = model.Address,
                     City = model.City,
@@ -72,7 +77,9 @@ namespace CloudDevPOE.Services
                 _context.Customers.Add(customer);
                 await _context.SaveChangesAsync();
 
-                // Create empty cart for customer
+                Console.WriteLine($"[DEBUG] ✅ Customer created with CustomerId: {customer.CustomerId}");
+
+                // Step 3: Create empty cart
                 var cart = new Cart
                 {
                     CustomerId = customer.CustomerId,
@@ -83,10 +90,20 @@ namespace CloudDevPOE.Services
                 _context.Carts.Add(cart);
                 await _context.SaveChangesAsync();
 
+                Console.WriteLine($"[DEBUG] ✅ Cart created with CartId: {cart.CartId}");
+
+                // Commit transaction
+                await transaction.CommitAsync();
+
+                Console.WriteLine($"[DEBUG] ✅ Registration complete! UserId={user.UserId}, CustomerId={customer.CustomerId}, CartId={cart.CartId}");
+
                 return (true, "Registration successful", user);
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
+                Console.WriteLine($"[ERROR] Registration failed: {ex.Message}");
+                Console.WriteLine($"[ERROR] Inner: {ex.InnerException?.Message}");
                 return (false, $"Registration failed: {ex.Message}", null);
             }
         }
@@ -96,17 +113,26 @@ namespace CloudDevPOE.Services
         {
             try
             {
+                Console.WriteLine($"[DEBUG] Login attempt for: {model.Email}");
+
                 // Find user by email
                 var user = await _context.Users
                     .FirstOrDefaultAsync(u => u.Email == model.Email && u.IsActive);
 
                 if (user == null)
                 {
+                    Console.WriteLine($"[DEBUG] User not found: {model.Email}");
                     return (false, "Invalid email or password", null, null);
                 }
 
-                // Verify password using BCrypt
-                if (!BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
+                Console.WriteLine($"[DEBUG] User found. Verifying password...");
+
+                // Verify password
+                bool isPasswordValid = BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash);
+
+                Console.WriteLine($"[DEBUG] Password valid: {isPasswordValid}");
+
+                if (!isPasswordValid)
                 {
                     return (false, "Invalid email or password", null, null);
                 }
@@ -121,31 +147,32 @@ namespace CloudDevPOE.Services
                 {
                     customer = await _context.Customers
                         .FirstOrDefaultAsync(c => c.UserId == user.UserId);
+
+                    Console.WriteLine($"[DEBUG] Customer profile loaded: CustomerId={customer?.CustomerId}");
                 }
 
+                Console.WriteLine($"[DEBUG] ✅ Login successful for {user.Email}");
                 return (true, "Login successful", user, customer);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] Login failed: {ex.Message}");
                 return (false, $"Login failed: {ex.Message}", null, null);
             }
         }
 
-        // Create admin user (for initial setup or manual admin creation)
+        // Create admin user
         public async Task<(bool Success, string Message)> CreateAdminAsync(string email, string password, string firstName, string lastName)
         {
             try
             {
-                // Check if email already exists
                 if (await _context.Users.AnyAsync(u => u.Email == email))
                 {
                     return (false, "Email is already registered");
                 }
 
-                // Create username from email
                 string username = email.Split('@')[0] + "_admin";
 
-                // Create admin user with hashed password
                 var user = new User
                 {
                     Username = username,
@@ -159,7 +186,6 @@ namespace CloudDevPOE.Services
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                // Create customer profile for admin (optional, for consistency)
                 var customer = new Customer
                 {
                     UserId = user.UserId,

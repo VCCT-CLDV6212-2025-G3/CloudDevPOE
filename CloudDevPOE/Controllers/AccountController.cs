@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using CloudDevPOE.Models.ViewModels;
 using CloudDevPOE.Services;
@@ -17,6 +18,7 @@ namespace CloudDevPOE.Controllers
         }
 
         // GET: Account/Login
+        [AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
@@ -25,6 +27,7 @@ namespace CloudDevPOE.Controllers
 
         // POST: Account/Login
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
@@ -45,19 +48,25 @@ namespace CloudDevPOE.Controllers
                         new Claim(ClaimTypes.Role, result.User.Role)
                     };
 
-                    // Add customer ID claim if user is a customer
+                    // Add CustomerId claim if user is a customer
                     if (result.Customer != null)
                     {
                         claims.Add(new Claim("CustomerId", result.Customer.CustomerId.ToString()));
                     }
 
+                    // Create claims identity
                     var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    // Set authentication properties
                     var authProperties = new AuthenticationProperties
                     {
                         IsPersistent = model.RememberMe,
-                        ExpiresUtc = model.RememberMe ? DateTimeOffset.UtcNow.AddDays(30) : DateTimeOffset.UtcNow.AddHours(2)
+                        ExpiresUtc = model.RememberMe
+                            ? DateTimeOffset.UtcNow.AddDays(30)
+                            : DateTimeOffset.UtcNow.AddHours(2)
                     };
 
+                    // Sign in the user
                     await HttpContext.SignInAsync(
                         CookieAuthenticationDefaults.AuthenticationScheme,
                         new ClaimsPrincipal(claimsIdentity),
@@ -71,7 +80,7 @@ namespace CloudDevPOE.Controllers
                         return RedirectToAction("AdminDashboard", "Order");
                     }
 
-                    // Redirect to return URL or home
+                    // Redirect to returnUrl if provided and valid, otherwise go to home
                     if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                     {
                         return Redirect(returnUrl);
@@ -89,6 +98,7 @@ namespace CloudDevPOE.Controllers
         }
 
         // GET: Account/Register
+        [AllowAnonymous]
         public IActionResult Register()
         {
             return View();
@@ -96,6 +106,7 @@ namespace CloudDevPOE.Controllers
 
         // POST: Account/Register
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
@@ -120,20 +131,23 @@ namespace CloudDevPOE.Controllers
         // POST: Account/Logout
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             TempData["Success"] = "You have been logged out successfully.";
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("Login", "Account");
         }
 
         // GET: Account/AccessDenied
+        [AllowAnonymous]
         public IActionResult AccessDenied()
         {
             return View();
         }
 
         // GET: Account/Profile
+        [Authorize]
         public async Task<IActionResult> Profile()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

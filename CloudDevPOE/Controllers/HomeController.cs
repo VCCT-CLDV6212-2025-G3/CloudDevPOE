@@ -5,9 +5,16 @@ namespace CloudDevPOE.Controllers
     public class HomeController : Controller
     {
         // GET: /Home/Index
-        // Displays the main home page of the application
+        // Redirects to login if user is not authenticated
         public IActionResult Index()
         {
+            // If user is not logged in, redirect to login page
+            if (!User.Identity?.IsAuthenticated ?? true)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            // If user is logged in, show the home page
             return View();
         }
 

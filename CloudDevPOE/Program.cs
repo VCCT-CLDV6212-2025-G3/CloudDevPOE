@@ -1,4 +1,4 @@
-using CloudDevPOE.Services;
+﻿using CloudDevPOE.Services;
 using CloudDevPOE.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -9,7 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 // ==================== AZURE SQL DATABASE CONFIGURATION ====================
-// Get Azure SQL connection string from appsettings.json
 var sqlConnectionString = builder.Configuration.GetConnectionString("AzureSqlDatabase");
 
 if (string.IsNullOrEmpty(sqlConnectionString))
@@ -22,10 +21,17 @@ if (string.IsNullOrEmpty(sqlConnectionString))
 
 // Register Entity Framework DbContext with Azure SQL Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(sqlConnectionString));
+{
+    options.UseSqlServer(sqlConnectionString);
+    // Enable detailed errors in development
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
+});
 
 // ==================== AZURE STORAGE CONFIGURATION ====================
-// Get Azure Storage connection string from appsettings.json
 var storageConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
 
 if (string.IsNullOrEmpty(storageConnectionString))
@@ -43,7 +49,6 @@ builder.Services.AddSingleton(provider => new AzureQueueService(storageConnectio
 builder.Services.AddSingleton(provider => new AzureFileService(storageConnectionString));
 
 // ==================== AUTHENTICATION CONFIGURATION ====================
-// Configure Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -60,12 +65,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 // ==================== APPLICATION SERVICES ====================
-// Register scoped services for SQL Database operations
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
 
-// ==================== SESSION CONFIGURATION (Optional) ====================
+// ==================== SESSION CONFIGURATION ====================
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -75,21 +79,34 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
-// ==================== DATABASE INITIALIZATION ====================
-// Ensure database is created and migrations are applied
+// ==================== DATABASE CONNECTION TEST ====================
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        context.Database.EnsureCreated(); // Creates database if it doesn't exist
-        // For production, use: context.Database.Migrate(); // Applies pending migrations
+
+        // Test database connection
+        if (context.Database.CanConnect())
+        {
+            logger.LogInformation("✅ Database connection successful!");
+            logger.LogInformation("✅ Application ready to use");
+        }
+        else
+        {
+            logger.LogError("❌ Cannot connect to database. Please check your connection string.");
+        }
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while creating/migrating the database.");
+        logger.LogError(ex, "❌ Database connection failed");
+        logger.LogError($"Make sure you have:");
+        logger.LogError($"1. Created the database in Azure");
+        logger.LogError($"2. Run DatabaseSetup_FIXED.sql");
+        logger.LogError($"3. Updated connection string in appsettings.json");
     }
 }
 
@@ -102,26 +119,18 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
 
-// Authentication & Authorization middleware (ORDER MATTERS!)
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Session middleware (if using session)
 app.UseSession();
 
-// Define default route pattern for MVC
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}"
 );
 
-// Start the web application
 app.Run();
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////
 //REFERENCES//
 //Azure Storage Services Overview: https://docs.microsoft.com/en-us/azure/storage/

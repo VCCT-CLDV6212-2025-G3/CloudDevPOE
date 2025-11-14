@@ -1,0 +1,182 @@
+﻿@model CloudDevPOE.Models.Order
+@{
+    ViewData["Title"] = "Order Details";
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-receipt-cutoff"></i> Order Details</h2>
+        @if (isAdmin)
+        {
+            <a asp-action="AdminDashboard" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Orders
+            </a>
+        }
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Order: @Model.OrderNumber</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Order Date:</strong>
+                            <p>@Model.OrderDate.ToString("MMMM dd, yyyy h:mm tt")</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Status:</strong>
+                            <p>
+                                @if (Model.Status == "PENDING")
+                                {
+                                    <span class="badge bg-warning text-dark fs-6">@Model.Status</span>
+                                }
+                                else if (Model.Status == "PROCESSED")
+                                {
+                                    <span class="badge bg-info fs-6">@Model.Status</span>
+                                }
+                                else if (Model.Status == "SHIPPED")
+                                {
+                                    <span class="badge bg-primary fs-6">@Model.Status</span>
+                                }
+                                else if (Model.Status == "DELIVERED")
+                                {
+                                    <span class="badge bg-success fs-6">@Model.Status</span>
+                                }
+                                else if (Model.Status == "CANCELLED")
+                                {
+                                    <span class="badge bg-danger fs-6">@Model.Status</span>
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.ShippingAddress))
+                    {
+                        <div class="mb-3">
+                            <strong>Shipping Address:</strong>
+                            <p>@Model.ShippingAddress</p>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <div class="mb-3">
+                            <strong>Order Notes:</strong>
+                            <p>@Model.Notes</p>
+                        </div>
+                    }
+
+                    @if (Model.ProcessedDate.HasValue)
+                    {
+                        <div class="mb-3">
+                            <strong>Processed Date:</strong>
+                            <p>@Model.ProcessedDate.Value.ToString("MMMM dd, yyyy h:mm tt")</p>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <h5 class="mb-3">Order Items:</h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.OrderItems)
+                                {
+                                    <tr>
+                                        <td>@item.ProductName</td>
+                                        <td>$@item.Price.ToString("N2")</td>
+                                        <td>@item.Quantity</td>
+                                        <td><strong>$@item.Subtotal.ToString("N2")</strong></td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="3" class="text-end">Total:</th>
+                                    <th><strong class="text-success">$@Model.TotalAmount.ToString("N2")</strong></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.Status == "PENDING" && !isAdmin)
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-body">
+                        <form asp-action="CancelOrder" asp-route-id="@Model.OrderId" method="post">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?');">
+                                <i class="bi bi-x-circle"></i> Cancel Order
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-md-4">
+            @if (isAdmin)
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">Admin Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <form asp-action="UpdateStatus" method="post">
+                            <input type="hidden" name="orderId" value="@Model.OrderId" />
+                            <div class="mb-3">
+                                <label for="newStatus" class="form-label">Update Status:</label>
+                                <select name="newStatus" id="newStatus" class="form-select">
+                                    <option value="PENDING" selected="@(Model.Status == "PENDING")">PENDING</option>
+                                    <option value="PROCESSED" selected="@(Model.Status == "PROCESSED")">PROCESSED</option>
+                                    <option value="SHIPPED" selected="@(Model.Status == "SHIPPED")">SHIPPED</option>
+                                    <option value="DELIVERED" selected="@(Model.Status == "DELIVERED")">DELIVERED</option>
+                                    <option value="CANCELLED" selected="@(Model.Status == "CANCELLED")">CANCELLED</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle"></i> Update Status
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                @if (Model.Customer != null)
+                {
+                    <div class="card shadow">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Customer Info</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Name:</strong> @Model.Customer.FirstName @Model.Customer.LastName</p>
+                            <p><strong>Email:</strong> @Model.Customer.User?.Email</p>
+                            @if (!string.IsNullOrEmpty(Model.Customer.PhoneNumber))
+                            {
+                                <p><strong>Phone:</strong> @Model.Customer.PhoneNumber</p>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
