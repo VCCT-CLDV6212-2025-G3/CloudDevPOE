@@ -140,3 +140,7 @@ app.Run();
 //Azure.Storage.Queues Client Library: https://docs.microsoft.com/en-us/dotnet/api/overview/azure/storage.queues-readme
 //Azure.Storage.Files.Shares Client Library: https://docs.microsoft.com/en-us/dotnet/api/overview/azure/storage.files.shares-readme
 //ChatGPT - https://chatgpt.com/share/68b0aa50-64bc-8001-9693-da178269ab1f
+//SQL Databases - https://learn.microsoft.com/en-us/azure/azure-sql/database/sql-database-paas-overview?view=azuresql
+//Geeksforgeeks - https://www.geeksforgeeks.org/devops/microsoft-azure-azure-sql-database/
+//DataCamp - https://www.datacamp.com/tutorial/azure-sql-database
+///////////////////////////////////////////////////////////////////////////////////////////
