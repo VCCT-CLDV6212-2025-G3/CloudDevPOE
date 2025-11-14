@@ -1,0 +1,83 @@
+﻿@model CloudDevPOE.Models.Customer
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">My Profile</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>First Name:</strong>
+                            <p>@Model.FirstName</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Last Name:</strong>
+                            <p>@Model.LastName</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>Email:</strong>
+                            <p>@Model.User?.Email</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>Phone Number:</strong>
+                            <p>@(string.IsNullOrEmpty(Model.PhoneNumber) ? "Not provided" : Model.PhoneNumber)</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>Address:</strong>
+                            <p>@(string.IsNullOrEmpty(Model.Address) ? "Not provided" : Model.Address)</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>City:</strong>
+                            <p>@(string.IsNullOrEmpty(Model.City) ? "Not provided" : Model.City)</p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Postal Code:</strong>
+                            <p>@(string.IsNullOrEmpty(Model.PostalCode) ? "Not provided" : Model.PostalCode)</p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Country:</strong>
+                            <p>@(string.IsNullOrEmpty(Model.Country) ? "Not provided" : Model.Country)</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Role:</strong>
+                            <p><span class="badge bg-primary">@Model.User?.Role</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Member Since:</strong>
+                            <p>@Model.User?.CreatedDate.ToString("MMMM dd, yyyy")</p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <a asp-controller="Order" asp-action="Index" class="btn btn-primary">My Orders</a>
+                        <a asp-controller="Cart" asp-action="Index" class="btn btn-success">My Cart</a>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Home</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

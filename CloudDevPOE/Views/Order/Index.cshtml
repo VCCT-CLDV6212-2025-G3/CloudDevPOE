@@ -1,0 +1,75 @@
+﻿@model List<CloudDevPOE.Models.Order>
+@{
+    ViewData["Title"] = "My Orders";
+}
+
+<div class="container mt-5">
+    <h2 class="mb-4">
+        <i class="fas fa-box"></i> My Orders
+    </h2>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <h4>You haven't placed any orders yet</h4>
+            <p>Start shopping and place your first order!</p>
+            <a asp-controller="Product" asp-action="Index" class="btn btn-primary">Browse Products</a>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order Number</th>
+                            <th>Date</th>
+                            <th>Total Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model)
+                        {
+                            <tr>
+                                <td><strong>@order.OrderNumber</strong></td>
+                                <td>@order.OrderDate.ToString("MMM dd, yyyy")</td>
+                                <td>R @order.TotalAmount.ToString("N2")</td>
+                                <td>
+                                    @switch (order.Status)
+                                    {
+                                        case "PENDING":
+                                            <span class="badge bg-warning text-dark">@order.Status</span>
+                                            break;
+                                        case "PROCESSED":
+                                            <span class="badge bg-info">@order.Status</span>
+                                            break;
+                                        case "SHIPPED":
+                                            <span class="badge bg-primary">@order.Status</span>
+                                            break;
+                                        case "DELIVERED":
+                                            <span class="badge bg-success">@order.Status</span>
+                                            break;
+                                        case "CANCELLED":
+                                            <span class="badge bg-danger">@order.Status</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-secondary">@order.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

@@ -24,9 +24,4 @@
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Views\Cart\" />
-    <Folder Include="Views\Order\" />
-  </ItemGroup>
-
 </Project>

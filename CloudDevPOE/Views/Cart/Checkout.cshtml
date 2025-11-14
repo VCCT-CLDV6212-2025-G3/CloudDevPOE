@@ -1,0 +1,105 @@
+﻿@model CloudDevPOE.Models.Cart
+@{
+    ViewData["Title"] = "Checkout";
+}
+
+<div class="container mt-5">
+    <h2 class="mb-4">
+        <i class="fas fa-credit-card"></i> Checkout
+    </h2>
+
+    <div class="row">
+        <!-- Order Summary -->
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Order Summary</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.CartItems)
+                            {
+                                <tr>
+                                    <td>@item.ProductName</td>
+                                    <td>R @item.Price.ToString("N2")</td>
+                                    <td>@item.Quantity</td>
+                                    <td>R @item.Subtotal.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-success">
+                                <td colspan="3" class="text-end"><h5>Total:</h5></td>
+                                <td><h5><strong>R @Model.TotalAmount.ToString("N2")</strong></h5></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Shipping Information -->
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">Shipping Information</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-controller="Order" asp-action="PlaceOrder" method="post">
+                        <div class="form-group mb-3">
+                            <label for="shippingAddress" class="form-label">Shipping Address</label>
+                            <textarea name="shippingAddress" id="shippingAddress" class="form-control"
+                                      rows="3" placeholder="Enter complete shipping address" required></textarea>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="notes" class="form-label">Order Notes (Optional)</label>
+                            <textarea name="notes" id="notes" class="form-control"
+                                      rows="2" placeholder="Any special instructions"></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Cart
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle"></i> Place Order
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Total Card -->
+        <div class="col-md-4">
+            <div class="card shadow sticky-top" style="top: 20px;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Order Total</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Items (@Model.TotalItems):</span>
+                        <strong>R @Model.TotalAmount.ToString("N2")</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Shipping:</span>
+                        <strong>FREE</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <h5>Total:</h5>
+                        <h5><strong>R @Model.TotalAmount.ToString("N2")</strong></h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

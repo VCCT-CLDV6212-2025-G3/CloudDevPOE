@@ -1,0 +1,186 @@
+﻿@model List<CloudDevPOE.Models.Order>
+@{
+    ViewData["Title"] = "Admin Dashboard - Orders";
+    var statistics = ViewBag.Statistics as CloudDevPOE.Services.OrderStatistics;
+    var selectedStatus = ViewBag.SelectedStatus as string;
+}
+
+<div class="container-fluid mt-5">
+    <h2 class="mb-4">
+        <i class="fas fa-tachometer-alt"></i> Admin Dashboard - Order Management
+    </h2>
+
+    <!-- Statistics Cards -->
+    @if (statistics != null)
+    {
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="card text-white bg-primary shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Orders</h5>
+                        <p class="display-6">@statistics.TotalOrders</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-white bg-warning shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">Pending</h5>
+                        <p class="display-6">@statistics.PendingOrders</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-white bg-info shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">Processed</h5>
+                        <p class="display-6">@statistics.ProcessedOrders</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-white bg-primary shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">Shipped</h5>
+                        <p class="display-6">@statistics.ShippedOrders</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-white bg-success shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">Delivered</h5>
+                        <p class="display-6">@statistics.DeliveredOrders</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-white bg-dark shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Revenue</h5>
+                        <p class="display-6">R @statistics.TotalRevenue.ToString("N0")</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Filter Options -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <h5 class="mb-0">Filter by Status:</h5>
+                </div>
+                <div class="col-md-9">
+                    <div class="btn-group" role="group">
+                        <a asp-action="AdminDashboard" class="btn @(string.IsNullOrEmpty(selectedStatus) ? "btn-primary" : "btn-outline-primary")">
+                            All Orders
+                        </a>
+                        <a asp-action="AdminDashboard" asp-route-status="PENDING"
+                           class="btn @(selectedStatus == "PENDING" ? "btn-warning" : "btn-outline-warning")">
+                            Pending
+                        </a>
+                        <a asp-action="AdminDashboard" asp-route-status="PROCESSED"
+                           class="btn @(selectedStatus == "PROCESSED" ? "btn-info" : "btn-outline-info")">
+                            Processed
+                        </a>
+                        <a asp-action="AdminDashboard" asp-route-status="SHIPPED"
+                           class="btn @(selectedStatus == "SHIPPED" ? "btn-primary" : "btn-outline-primary")">
+                            Shipped
+                        </a>
+                        <a asp-action="AdminDashboard" asp-route-status="DELIVERED"
+                           class="btn @(selectedStatus == "DELIVERED" ? "btn-success" : "btn-outline-success")">
+                            Delivered
+                        </a>
+                        <a asp-action="AdminDashboard" asp-route-status="CANCELLED"
+                           class="btn @(selectedStatus == "CANCELLED" ? "btn-danger" : "btn-outline-danger")">
+                            Cancelled
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <h4>No orders found</h4>
+            <p>There are no orders matching your filter criteria.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order Number</th>
+                                <th>Customer</th>
+                                <th>Email</th>
+                                <th>Order Date</th>
+                                <th>Total Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var order in Model)
+                            {
+                                <tr>
+                                    <td><strong>@order.OrderNumber</strong></td>
+                                    <td>@order.Customer?.FirstName @order.Customer?.LastName</td>
+                                    <td>@order.Customer?.User?.Email</td>
+                                    <td>@order.OrderDate.ToString("MMM dd, yyyy")</td>
+                                    <td>R @order.TotalAmount.ToString("N2")</td>
+                                    <td>
+                                        @switch (order.Status)
+                                        {
+                                            case "PENDING":
+                                                <span class="badge bg-warning text-dark">@order.Status</span>
+                                                break;
+                                            case "PROCESSED":
+                                                <span class="badge bg-info">@order.Status</span>
+                                                break;
+                                            case "SHIPPED":
+                                                <span class="badge bg-primary">@order.Status</span>
+                                                break;
+                                            case "DELIVERED":
+                                                <span class="badge bg-success">@order.Status</span>
+                                                break;
+                                            case "CANCELLED":
+                                                <span class="badge bg-danger">@order.Status</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-secondary">@order.Status</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@order.OrderId" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        @if (order.Status == "PENDING")
+                                        {
+                                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                                <input type="hidden" name="orderId" value="@order.OrderId" />
+                                                <input type="hidden" name="newStatus" value="PROCESSED" />
+                                                <button type="submit" class="btn btn-sm btn-success" title="Mark as Processed">
+                                                    <i class="fas fa-check"></i> Process
+                                                </button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
